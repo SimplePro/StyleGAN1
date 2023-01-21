@@ -258,8 +258,7 @@ class Discriminator(nn.Module):
                 WSConv2d(in_channels=DISC_CHANNEL_LIST[-1][-1], out_channels=DISC_CHANNEL_LIST[-1][-1], kernel_size=4, stride=1, padding=0),
                 nn.LeakyReLU(0.2),
                 WSConv2d(in_channels=DISC_CHANNEL_LIST[-1][-1], out_channels=1, kernel_size=1, stride=1, padding=0),
-                nn.Flatten(),
-                nn.Sigmoid()
+                nn.Flatten()
             )
 
 
