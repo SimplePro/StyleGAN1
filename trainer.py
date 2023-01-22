@@ -152,7 +152,7 @@ if __name__ == '__main__':
 
     wandb.init(project="StyleGAN1", entity="donghwankim")
 
-    wandb.run.name = "lambda_gp:10/z_dim:512/w_dim:512/"
+    wandb.run.name = "lambda_gp:10/z_dim:512/w_dim:512"
     wandb.save()
 
     args = {
