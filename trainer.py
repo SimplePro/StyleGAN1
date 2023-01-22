@@ -10,16 +10,19 @@ from models import Generator, Discriminator
 
 from utils import get_loader
 
+import wandb
+
 
 Z_DIM = 512
 W_DIM = 512
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 LAMBDA_GP = 10
 IMAGE_SIZE = [4, 8, 16, 32, 64, 128, 256, 512]
-BATCH_SIZE = [128, 64, 32, 32, 16, 16, 8, 4, 4]
-EPOCHS = [20, 30, 40, 50, 60, 70, 80, 100]
+BATCH_SIZE = [256, 256, 128, 64, 32, 16, 8, 4]
+EPOCHS = [20, 30, 40, 50, 60, 70, 80]
 
 
+# wgan-gp
 def get_gradient_penalty(disc, real_img, fake_img, alpha, train_step, device="cpu"):
     BATCH_SIZE, C, H, W = real_img.shape
     beta = torch.randn((BATCH_SIZE, 1, 1, 1)).repeat(1, C, H, W).to(device)
@@ -128,6 +131,8 @@ class Trainer:
                 disc_loss=disc_loss.item()
             )
 
+            wandb.log({"gp": gp.item(), "gen_loss": gen_loss.item(), "disc_loss": disc_loss.item()})
+
 
     def run(self, step, epochs, loader):
         print(f"\n\nImage Size: {IMAGE_SIZE[step]}x{IMAGE_SIZE[step]}\n")
@@ -138,18 +143,34 @@ class Trainer:
             self.train_fn(epochs, loader)
             test_image = self.test_fn()
             test_image.save(f"test_images/{step}/{epoch}.jpg")
+            wandb.log({f"test_image{step}": wandb.Image(test_image)})
 
             self.reset_alpha()
 
 
-
 if __name__ == '__main__':
+
+    wandb.init(project="StyleGAN1", entity="donghwankim")
+
+    wandb.run.name = "lambda_gp:10/z_dim:512/w_dim:512/"
+    wandb.save()
+
+    args = {
+        "Z_DIM": Z_DIM,
+        "W_DIM": W_DIM,
+        "LAMBDA_GP": LAMBDA_GP,
+        "EPOCHS": EPOCHS,
+        "BATCH_SIZES": BATCH_SIZE
+    }
+
+    wandb.config.update(args)
+
     gen = Generator(Z_DIM, W_DIM, const_channels=512)
     disc = Discriminator()
 
     trainer = Trainer(gen, disc)
 
-    for step in range(1):
+    for step in range(8):
         loader, _ = get_loader(
             IMAGE_SIZE[step],
             dataset_root="/home/kdhsimplepro/kdhsimplepro/AI/ffhq/",
