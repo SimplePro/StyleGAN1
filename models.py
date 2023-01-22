@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from time import time
 
 
+# 생성자의 conv_block의 (in_channels, out_channels) list
 GEN_CHANNEL_LIST = [
     (512, 512), # 8x8
     (512, 512), # 16x16
@@ -15,7 +16,9 @@ GEN_CHANNEL_LIST = [
     (64, 64), # 512x512
 ]
 
+# 판별자는 생성자의 channel_list를 반대로 뒤집은 것이다.
 DISC_CHANNEL_LIST = [(out_channels, in_channels) for in_channels, out_channels in GEN_CHANNEL_LIST[::-1]]
+
 
 class WSConv2d(nn.Module):
 
@@ -55,7 +58,7 @@ class PixelNorm(nn.Module):
     
     def forward(self, x):
         return x / torch.sqrt(torch.mean(x**2, dim=1, keepdim=True) + self.epsilon)
-    
+
 
 class MappingNetwork(nn.Module):
 
@@ -149,6 +152,7 @@ class Generator(nn.Module):
 
         self.mapping_network = MappingNetwork(z_dim, w_dim)
 
+        # const layer가 포함된 block.
         self.initial_inject_noise1 = InjectNoise(const_channels)
         self.initial_adain1 = AdaIN(const_channels, w_dim)
         self.initial_conv = WSConv2d(const_channels, const_channels, kernel_size=3, stride=1, padding=1)
@@ -160,6 +164,7 @@ class Generator(nn.Module):
 
         self.prog_blocks = nn.ModuleList([])
         self.to_rgbs = nn.ModuleList([
+            # const layer의 to_rgb 레이어.
             WSConv2d(in_channels=const_channels, out_channels=3, kernel_size=1, stride=1, padding=0)
         ])
 
@@ -178,8 +183,10 @@ class Generator(nn.Module):
 
     
     def forward(self, z, alpha, step):
+        # mapping network
         w = self.mapping_network(z)
 
+        # const layer가 포함된 conv_block
         out = self.initial_inject_noise1(self.const)
         out = self.initial_adain1(out, w)
         out = self.initial_conv(out)
@@ -187,17 +194,18 @@ class Generator(nn.Module):
         out = self.leaky(out)
         out = self.initial_adain2(out, w)
 
+        # 만약 const layer가 포함된 conv_block만 학습시킨다면, fade_in 없이 to_rgb 레이어를 거쳐 반환.
         if step == 0:
             return self.to_rgbs[0](out)
 
         for i in range(step):
-            upsampled = F.interpolate(out, scale_factor=2.0, mode="bilinear")
-            out = self.prog_blocks[i](upsampled, w)
+            upsampled = F.interpolate(out, scale_factor=2.0, mode="bilinear") # upsampling
+            out = self.prog_blocks[i](upsampled, w) # prog_block
         
-        upsampled = self.to_rgbs[step-1](upsampled)
-        out = self.to_rgbs[step](out)
+        upsampled = self.to_rgbs[step-1](upsampled) # 업샘플링된 레이어를 to_rgb를 거쳐 rgb image로 변환.
+        out = self.to_rgbs[step](out) # 마지막 레이어를 to_rgb를 거쳐 rgb image로 변환.
 
-        return self.fade_in(alpha, upsampled, out)
+        return self.fade_in(alpha, upsampled, out) # fade_in 후 반환.
 
         
 class DiscriminatorBlock(nn.Module):
@@ -248,9 +256,11 @@ class Discriminator(nn.Module):
             )
 
         self.from_rgbs.append(
+            # generator의 const layer가 포함된 conv block과 매칭될 from_rgb layer.
             WSConv2d(in_channels=3, out_channels=DISC_CHANNEL_LIST[-1][-1], kernel_size=1, stride=1, padding=0)
         )
 
+        # generator의 const layer가 포함된 conv_block과 매칭될 final_block
         self.final_block = nn.Sequential(
                 MinibatchStd(),
                 WSConv2d(in_channels=DISC_CHANNEL_LIST[-1][-1] + 1, out_channels=DISC_CHANNEL_LIST[-1][-1], kernel_size=3, stride=1, padding=1),
@@ -267,23 +277,25 @@ class Discriminator(nn.Module):
 
 
     def forward(self, x, alpha, step):
+        # generator의 앞에서 0번째 prog_block과 discriminator의 뒤에서 0번째 from_rgb가 연결된다.
         idx = len(self.prog_blocks) - step
         out = self.leaky(self.from_rgbs[idx](x))
-        
+
+        # 만약 step이 0이라면 fade_in을 거치지 않고, final_block을 거쳐 반환.
         if step == 0:
             out = self.final_block(out)
             return out
         
-        downsampled = self.leaky(self.from_rgbs[idx+1](self.avg_pool(x)))
-        out = self.avg_pool(self.prog_blocks[idx](out))
+        downsampled = self.leaky(self.from_rgbs[idx+1](self.avg_pool(x))) # downsampling
+        out = self.avg_pool(self.prog_blocks[idx](out)) # idx번째 prog_block
 
-        out = self.fade_in(alpha, downsampled, out)
+        out = self.fade_in(alpha, downsampled, out) # fade_in
 
-        for i in range(idx+1, len(self.prog_blocks)):
+        for i in range(idx+1, len(self.prog_blocks)): # idx+1부터 마지막 prog_block까지
             out = self.prog_blocks[i](out)
             out = self.avg_pool(out)
         
-        out = self.final_block(out)
+        out = self.final_block(out) # 최종적으로 final_block을 거침.
         
         return out
 
@@ -297,7 +309,7 @@ if __name__ == '__main__':
 
     print(f"gen params: {sum([p.numel() for p in gen.parameters()])}, disc params: {sum([p.numel() for p in disc.parameters()])}\n")
 
-    batch_sizes = [128, 64, 32, 32, 16, 16, 8, 4, 4]
+    batch_sizes = [256, 256, 128, 64, 32, 16, 8, 4]
 
     alpha = 1
 
