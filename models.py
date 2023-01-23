@@ -198,14 +198,21 @@ class Generator(nn.Module):
         if step == 0:
             return self.to_rgbs[0](out)
 
+        # upsampeld_rgb = None
+        # out_rgb = None
+
         for i in range(step):
             upsampled = F.interpolate(out, scale_factor=2.0, mode="bilinear") # upsampling
             out = self.prog_blocks[i](upsampled, w) # prog_block
+
+            # upsampled_rgb = self.to_rgbs[i](upsampled)
+            # out_rgb = self.to_rgbs[i+1](out)
         
         upsampled = self.to_rgbs[step-1](upsampled) # 업샘플링된 레이어를 to_rgb를 거쳐 rgb image로 변환.
         out = self.to_rgbs[step](out) # 마지막 레이어를 to_rgb를 거쳐 rgb image로 변환.
 
         return self.fade_in(alpha, upsampled, out) # fade_in 후 반환.
+        # return self.fade_in(alpha, upsampled_rgb, out_rgb)
 
         
 class DiscriminatorBlock(nn.Module):
@@ -310,6 +317,7 @@ if __name__ == '__main__':
     print(f"gen params: {sum([p.numel() for p in gen.parameters()])}, disc params: {sum([p.numel() for p in disc.parameters()])}\n")
 
     batch_sizes = [256, 256, 128, 64, 32, 16, 8, 4]
+    # batch_sizes = [1] * 8
 
     alpha = 1
 

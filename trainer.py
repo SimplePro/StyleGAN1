@@ -177,3 +177,7 @@ if __name__ == '__main__':
             batch_size=BATCH_SIZE[step]
         )
         trainer.run(step=step, epochs=EPOCHS[step], loader=loader)
+
+    torch.save(trainer.gen.state_dict(), "./gen_state_dict.pt")
+    torch.save(trainer.disc.state_dict(), "./disc_state_dict.pt")
+    
