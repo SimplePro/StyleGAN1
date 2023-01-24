@@ -131,7 +131,7 @@ class Trainer:
                 disc_loss=disc_loss.item()
             )
 
-            # wandb.log({"gp": gp.item(), "gen_loss": gen_loss.item(), "disc_loss": disc_loss.item()})
+            wandb.log({"gp": gp.item(), "gen_loss": gen_loss.item(), "disc_loss": disc_loss.item()})
 
 
     def run(self, step, epochs, loader):
@@ -145,17 +145,17 @@ class Trainer:
             self.train_fn(epochs, loader)
             test_image = self.test_fn()
             test_image.save(f"test_images/{step}/{epoch}.jpg")
-            # wandb.log({f"test_image{step}": wandb.Image(test_image)})
+            wandb.log({f"test_image{step}": wandb.Image(test_image)})
 
             self.reset_alpha()
 
 
 if __name__ == '__main__':
 
-    # wandb.init(project="StyleGAN1", entity="donghwankim")
+    wandb.init(project="StyleGAN1", entity="donghwankim")
 
-    # wandb.run.name = "lambda_gp:10/z_dim:512/w_dim:512"
-    # wandb.save()
+    wandb.run.name = "lambda_gp:10/z_dim:512/w_dim:512"
+    wandb.save()
 
     args = {
         "Z_DIM": Z_DIM,
@@ -165,7 +165,7 @@ if __name__ == '__main__':
         "BATCH_SIZES": BATCH_SIZE
     }
 
-    # wandb.config.update(args)
+    wandb.config.update(args)
 
     gen = Generator(Z_DIM, W_DIM, const_channels=512)
     disc = Discriminator()
@@ -180,6 +180,6 @@ if __name__ == '__main__':
         )
         trainer.run(step=step, epochs=EPOCHS[step], loader=loader)
 
-    # torch.save(trainer.gen.state_dict(), "./gen_state_dict.pt")
-    # torch.save(trainer.disc.state_dict(), "./disc_state_dict.pt")
+    torch.save(trainer.gen.state_dict(), "./gen_state_dict.pt")
+    torch.save(trainer.disc.state_dict(), "./disc_state_dict.pt")
     
