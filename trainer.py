@@ -137,10 +137,10 @@ class Trainer:
     def run(self, step, epochs, loader):
         print(f"\n\nImage Size: {IMAGE_SIZE[step]}x{IMAGE_SIZE[step]}\n")
         self.step = step
-        wandb.config.update({"step": step})
+        wandb.log({"step": step})
 
         for epoch in range(epochs):
-            wandb.config.update({"epoch": epoch+1})
+            wandb.log({"cur_epoch": epoch+1})
             print(f"EPOCH: {epoch+1}/{epochs}")
             self.train_fn(epochs, loader)
             test_image = self.test_fn()
@@ -149,13 +149,13 @@ class Trainer:
 
             self.reset_alpha()
 
+            torch.save(trainer.gen.state_dict(), "./gen_state_dict.pt")
+            torch.save(trainer.disc.state_dict(), "./disc_state_dict.pt")
+
 
 if __name__ == '__main__':
 
     wandb.init(project="StyleGAN1", entity="donghwankim")
-
-    wandb.run.name = "lambda_gp:10/z_dim:512/w_dim:512"
-    wandb.save()
 
     args = {
         "Z_DIM": Z_DIM,
@@ -164,6 +164,9 @@ if __name__ == '__main__':
         "EPOCHS": EPOCHS,
         "BATCH_SIZES": BATCH_SIZE
     }
+
+    wandb.run.name = f"lambda_gp:{LAMBDA_GP}/z_dim:{Z_DIM}/w_dim:{W_DIM}"
+    wandb.save()
 
     wandb.config.update(args)
 
@@ -179,7 +182,4 @@ if __name__ == '__main__':
             batch_size=BATCH_SIZE[step]
         )
         trainer.run(step=step, epochs=EPOCHS[step], loader=loader)
-
-    torch.save(trainer.gen.state_dict(), "./gen_state_dict.pt")
-    torch.save(trainer.disc.state_dict(), "./disc_state_dict.pt")
     
