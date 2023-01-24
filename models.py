@@ -45,9 +45,14 @@ class WSLinear(nn.Module):
 
         self.linear = nn.Linear(in_features, out_features)
         self.scale = (2 / in_features) ** 0.5
+        self.bias = self.linear.bias
+        self.linear.bias = None
+
+        nn.init.normal_(self.linear.weight)
+        nn.init.zeros_(self.bias)
 
     def forward(self, x):
-        return self.linear(x * self.scale)
+        return self.linear(x * self.scale) + self.bias
 
 
 class PixelNorm(nn.Module):
@@ -69,13 +74,19 @@ class MappingNetwork(nn.Module):
             PixelNorm(),
             WSLinear(z_dim, w_dim),
             nn.ReLU(),
-            *[
-                nn.Sequential(
-                    WSLinear(w_dim, w_dim),
-                    nn.ReLU()
-                )
-                for _ in range(7)
-            ]
+            WSLinear(w_dim, w_dim),
+            nn.ReLU(),
+            WSLinear(w_dim, w_dim),
+            nn.ReLU(),
+            WSLinear(w_dim, w_dim),
+            nn.ReLU(),
+            WSLinear(w_dim, w_dim),
+            nn.ReLU(),
+            WSLinear(w_dim, w_dim),
+            nn.ReLU(),
+            WSLinear(w_dim, w_dim),
+            nn.ReLU(),
+            WSLinear(w_dim, w_dim),
         )
 
     def forward(self, x):
@@ -158,7 +169,6 @@ class Generator(nn.Module):
         self.initial_conv = WSConv2d(const_channels, const_channels, kernel_size=3, stride=1, padding=1)
         self.initial_inject_noise2 = InjectNoise(const_channels)
         self.initial_adain2 = AdaIN(const_channels, w_dim)
-        self.initial_to_rgb = WSConv2d(in_channels=const_channels, out_channels=3, kernel_size=1, stride=1, padding=0)
 
         self.leaky = nn.LeakyReLU(0.2, inplace=True)
 

@@ -19,7 +19,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 LAMBDA_GP = 10
 IMAGE_SIZE = [4, 8, 16, 32, 64, 128, 256, 512]
 BATCH_SIZE = [256, 256, 128, 64, 32, 16, 8, 4]
-EPOCHS = [20, 30, 40, 50, 60, 70, 80]
+EPOCHS = [20, 25, 35, 45, 55, 65, 80]
 
 
 # wgan-gp
@@ -131,29 +131,31 @@ class Trainer:
                 disc_loss=disc_loss.item()
             )
 
-            wandb.log({"gp": gp.item(), "gen_loss": gen_loss.item(), "disc_loss": disc_loss.item()})
+            # wandb.log({"gp": gp.item(), "gen_loss": gen_loss.item(), "disc_loss": disc_loss.item()})
 
 
     def run(self, step, epochs, loader):
         print(f"\n\nImage Size: {IMAGE_SIZE[step]}x{IMAGE_SIZE[step]}\n")
         self.step = step
+        wandb.config.update({"step": step})
 
         for epoch in range(epochs):
+            wandb.config.update({"epoch": epoch+1})
             print(f"EPOCH: {epoch+1}/{epochs}")
             self.train_fn(epochs, loader)
             test_image = self.test_fn()
             test_image.save(f"test_images/{step}/{epoch}.jpg")
-            wandb.log({f"test_image{step}": wandb.Image(test_image)})
+            # wandb.log({f"test_image{step}": wandb.Image(test_image)})
 
             self.reset_alpha()
 
 
 if __name__ == '__main__':
 
-    wandb.init(project="StyleGAN1", entity="donghwankim")
+    # wandb.init(project="StyleGAN1", entity="donghwankim")
 
-    wandb.run.name = "lambda_gp:10/z_dim:512/w_dim:512"
-    wandb.save()
+    # wandb.run.name = "lambda_gp:10/z_dim:512/w_dim:512"
+    # wandb.save()
 
     args = {
         "Z_DIM": Z_DIM,
@@ -163,7 +165,7 @@ if __name__ == '__main__':
         "BATCH_SIZES": BATCH_SIZE
     }
 
-    wandb.config.update(args)
+    # wandb.config.update(args)
 
     gen = Generator(Z_DIM, W_DIM, const_channels=512)
     disc = Discriminator()
@@ -178,6 +180,6 @@ if __name__ == '__main__':
         )
         trainer.run(step=step, epochs=EPOCHS[step], loader=loader)
 
-    torch.save(trainer.gen.state_dict(), "./gen_state_dict.pt")
-    torch.save(trainer.disc.state_dict(), "./disc_state_dict.pt")
+    # torch.save(trainer.gen.state_dict(), "./gen_state_dict.pt")
+    # torch.save(trainer.disc.state_dict(), "./disc_state_dict.pt")
     
