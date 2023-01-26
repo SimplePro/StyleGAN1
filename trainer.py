@@ -1,5 +1,6 @@
 import torch
 from torch.optim import Adam
+import torch.nn.functional as F
 
 from torchvision.utils import make_grid
 from torchvision.transforms.functional import to_pil_image
@@ -54,6 +55,7 @@ class Trainer:
         self,
         gen,
         disc,
+        lr=1e-3
     ):
 
         self.gen = gen.to(DEVICE)
@@ -61,10 +63,11 @@ class Trainer:
 
         self.opt_gen = Adam([
             {"params": [param for name, param in self.gen.named_parameters() if 'mapping_network' not in name]},
-            {"params": self.gen.mapping_network.parameters(), 'lr': 1e-5}
-        ], lr=1e-3, betas=(0.0, 0.99))
+            {"params": self.gen.mapping_network.parameters(), 'lr': lr*(1e-2)}
+        ], lr=lr, betas=(0.0, 0.99))
     
-        self.opt_disc = Adam(self.disc.parameters(), lr=1e-3, betas=(0.0, 0.99))
+        self.opt_disc = Adam(self.disc.parameters(), lr=lr, betas=(0.0, 0.99))
+
 
         self.test_z = torch.randn((16, 512)).to(DEVICE)
 
@@ -108,7 +111,7 @@ class Trainer:
             disc_fake = self.disc(fake.detach(), self.alpha, self.step)
             gp = get_gradient_penalty(self.disc, real, fake, self.alpha, self.step, DEVICE)
             disc_loss = (
-                -(torch.mean(disc_real) - torch.mean(disc_fake))
+                -(disc_real.mean() - disc_fake.mean())
                 + args["LAMBDA_GP"] * gp
                 + (0.001) * torch.mean(disc_real ** 2)
             )
@@ -118,13 +121,13 @@ class Trainer:
             self.opt_disc.step()
 
             gen_fake = self.disc(fake, self.alpha, self.step)
-            gen_loss = -torch.mean(gen_fake)
+            gen_loss = -gen_fake.mean()
 
             self.opt_gen.zero_grad()
             gen_loss.backward()
             self.opt_gen.step()
 
-            self.alpha += 1 / (epochs * len(loader) * 0.5)
+            self.alpha += 1 / (epochs * len(loader) * 0.7)
             self.alpha = min(self.alpha, 1)
 
             loop.set_postfix(
