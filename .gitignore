@@ -3,3 +3,4 @@ style_gan_tutorial.ipynb
 saved_examples
 __pycache__
 wandb
+.ipynb_checkpoints
