@@ -20,3 +20,8 @@ def get_loader(image_size, dataset_root, batch_size):
         shuffle=True
     )
     return loader, dataset
+
+
+if __name__ == '__main__':
+    loader, _ = get_loader(image_size=128, dataset_root="/home/kdhsimplepro/kdhsimplepro/AI/ffhq/", batch_size=16)
+    print(len(loader), 52000 / len(loader))

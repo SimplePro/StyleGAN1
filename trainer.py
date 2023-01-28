@@ -134,8 +134,6 @@ class Trainer:
             disc_loss.backward()
             self.opt_disc.step()
 
-            # 이 부분을 추가하는 것이 좋을 듯.
-            # gen이 만든 fake에 대해서 가중치 update가 이루어진 disc에게, 다시 fake에 대한 예측을 받아서 gen의 loss를 만들어내는 것은 discriminator에게 아주 유리한 조건이기 때문이다.
             z = torch.randn(real.size(0), args["Z_DIM"]).to(DEVICE)
             fake = self.gen(z, self.alpha, self.step)
 
@@ -170,9 +168,6 @@ class Trainer:
             test_image = self.test_fn()
             test_image.save(f"test_images/{self.step}/{epoch}.jpg")
             wandb.log({f"test_image{self.step}": wandb.Image(test_image)})
-
-            torch.save(self.gen.state_dict(), "./gen_state_dict.pt")
-            torch.save(self.disc.state_dict(), "./disc_state_dict.pt")
 
 
 if __name__ == '__main__':
@@ -213,5 +208,5 @@ if __name__ == '__main__':
 
         trainer.run(step=step, epochs=args["EPOCHS"][step], loader=loader)
 
-        torch.save(trainer.gen.state_dict(), f"./gen_state_dict_step{step}.pt")
-        torch.save(trainer.disc.state_dict(), f"./disc_state_dict_step{step}.pt")
+        torch.save(trainer.gen.state_dict(), f"./state_dict/step{step}/gen_state_dict.pt")
+        torch.save(trainer.disc.state_dict(), f"./state_dict/step{step}/disc_state_dict.pt")
