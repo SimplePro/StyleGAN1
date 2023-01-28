@@ -249,6 +249,7 @@ class MinibatchStd(nn.Module):
 
     def forward(self, x):
         batch_statistics = (torch.std(x, dim=0).mean().repeat(x.size(0), 1, x.size(2), x.size(3)))
+        batch_statistics = torch.nan_to_num(batch_statistics, nan=0.0)
 
         return torch.cat((x, batch_statistics), dim=1)
 
@@ -331,8 +332,9 @@ if __name__ == '__main__':
 
     alpha = 1
 
-    for step in range(8):
+    for step in range(len(batch_sizes)):
         start_time = time()
         z = torch.randn((batch_sizes[step], 512)).to(device)
-        out = gen(z, alpha, step)
-        print(f"STEP: {step}, gen_shape: {out.shape}, disc_shape: {disc(out, alpha, step).shape}, time: {time() - start_time}")
+        gen_out = gen(z, alpha, step)
+        disc_out = disc(gen_out, alpha, step)
+        print(f"STEP: {step}, gen_shape: {gen_out.shape}, disc_shape: {disc_out.shape}, time: {time() - start_time}")
