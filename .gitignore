@@ -2,3 +2,4 @@ tutorial
 __pycache__
 wandb
 .ipynb_checkpoints
+prediction_image*.jpg
